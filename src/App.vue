@@ -17,6 +17,8 @@
   <BarcodeScannerModal />
   <BarcodePrintModal />
   <ImportModal />
+
+  <SettingsModal />
 </template>
 
 <script setup lang="ts">
@@ -40,6 +42,7 @@ import BulkResponsibleModal from '@/components/modals/BulkResponsibleModal.vue';
 import BarcodeScannerModal from '@/components/modals/BarcodeScannerModal.vue';
 import BarcodePrintModal from '@/components/modals/BarcodePrintModal.vue';
 import ImportModal from '@/components/modals/ImportModal.vue';
+import SettingsModal from '@/components/settings/SettingsModal.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
