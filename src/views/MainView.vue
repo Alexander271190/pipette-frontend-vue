@@ -16,6 +16,11 @@ import { usePrefsStore } from '@/stores/prefs';
 import { useSettingsStore } from '@/stores/settings';
 import { useStatsStore } from '@/stores/stats';
 import { usePipettesStore } from '@/stores/pipettes';
+import { useHotkeys } from '@/composables/useHotkeys';
+import { usePullToRefresh } from '@/composables/usePullToRefresh';
+
+useHotkeys();
+usePullToRefresh();
 
 const prefs = usePrefsStore();
 const settings = useSettingsStore();
@@ -33,4 +38,5 @@ onMounted(async () => {
   // 3) Данные таблицы + статистика параллельно
   await Promise.all([pip.loadPaged(), stats.load()]);
 });
+  
 </script>
