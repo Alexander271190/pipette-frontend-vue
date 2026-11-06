@@ -40,10 +40,13 @@
       @input="onSearchInput"
     />
 
-    <!-- Фильтр (в Блоке 4 раскроем панель) -->
-    <button class="btn btn-secondary" @click="onFilterClick">
-      <i class="fa-solid fa-filter"></i> Фильтр
-    </button>
+   <!-- Фильтр -->
+<div style="position:relative;display:inline-block;">
+  <button class="btn btn-secondary" @click="showFilter = !showFilter">
+    <i class="fa-solid fa-filter"></i> Фильтр
+  </button>
+  <FilterPanel v-if="showFilter" @close="showFilter = false" />
+</div>
 
     <!-- Сканировать -->
     <button
@@ -103,6 +106,7 @@ import { useModals } from '@/composables/useModals';
 import { usePermissions } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
 import { useExport } from '@/composables/useExport';
+import FilterPanel from '@/components/table/FilterPanel.vue';
 
 const modals = useModals();
 const perm = usePermissions();
@@ -111,6 +115,7 @@ const exportComposable = useExport();
 const pip = usePipettesStore();
 const toast = useToastStore();
 const menuOpen = ref(false);
+const showFilter = ref(false);
 
 let searchTimer: number | null = null;
 
@@ -165,10 +170,6 @@ async function closeMenuAnd(action: string) {
     default:
       toast.show(`Действие «${action}» — в следующих блоках`, 'warn');
   }
-}
-
-function onFilterClick() {
-  toast.show('Фильтр-панель — в Блоке 4', 'warn');
 }
 
 function closeOnOutsideClick(e: MouseEvent) {
