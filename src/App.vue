@@ -19,6 +19,9 @@
   <ImportModal />
 
   <SettingsModal />
+
+  <UserEditModal />
+  <TempPasswordModal />
 </template>
 
 <script setup lang="ts">
@@ -43,7 +46,8 @@ import BarcodeScannerModal from '@/components/modals/BarcodeScannerModal.vue';
 import BarcodePrintModal from '@/components/modals/BarcodePrintModal.vue';
 import ImportModal from '@/components/modals/ImportModal.vue';
 import SettingsModal from '@/components/settings/SettingsModal.vue';
-
+import UserEditModal from '@/components/modals/UserEditModal.vue';
+import TempPasswordModal from '@/components/modals/TempPasswordModal.vue';
 const auth = useAuthStore();
 const router = useRouter();
 const ui = useUiStore();
