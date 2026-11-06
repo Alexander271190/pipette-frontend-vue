@@ -96,3 +96,34 @@ export const useAuthStore = defineStore('auth', () => {
     initFromStorage, applySession, login, logout, refreshUser, hasPermission,
   };
 });
+
+// Вспомогательные функции проверки прав (для удобства)
+import { computed } from 'vue';
+
+export function usePermissions() {
+  const auth = useAuthStore();
+  const p = (key: string) => auth.hasPermission(key);
+
+  return {
+    canAddPipette:              computed(() => p('add_pipette') || p('manage_pipettes')),
+    canEditPipette:             computed(() => p('edit_pipette') || p('manage_pipettes')),
+    canDeletePipette:           computed(() => p('delete_pipette') || p('manage_pipettes')),
+    canQuickCal:                computed(() => p('quick_calibration') || p('manage_pipettes')),
+    canTransferPipette:         computed(() => p('transfer_pipette') || p('manage_pipettes')),
+    canBulkSend:                computed(() => p('bulk_send') || p('manage_pipettes')),
+    canBulkReturn:              computed(() => p('bulk_return') || p('manage_pipettes')),
+    canBulkChangeResponsible:   computed(() => p('bulk_change_responsible') || p('manage_pipettes')),
+    canScanBarcode:             computed(() => p('scan_barcode')),
+    canPrintLabels:             computed(() => p('print_labels')),
+    canManageUsers:             computed(() => p('manage_users')),
+    canManageSettings:          computed(() => p('manage_settings')),
+    canManagePrinters:          computed(() => p('manage_printers')),
+    canViewLog:                 computed(() => p('view_log')),
+    canViewAudit:               computed(() => p('view_audit')),
+    canViewHistory:             computed(() => true),
+    canManagePipettes:          computed(() =>
+      p('manage_pipettes') || p('add_pipette') || p('edit_pipette') ||
+      p('delete_pipette') || p('quick_calibration') || p('bulk_send') || p('bulk_return')
+    ),
+  };
+}
