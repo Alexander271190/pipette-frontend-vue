@@ -23,10 +23,20 @@
             :class="`col-${colId}`"
             :data-col-id="colId"
             :style="thStyle(colId)"
-            @click="onHeaderClick(colId)"
+            draggable="true"
+            @dragstart="onDragStart($event, colId)"
+            @dragover="onDragOver"
+            @drop="onDrop($event, colId)"
+            @dragend="onDragEnd"
+            @click="onHeaderClick(colId, $event)"
+            style="position: relative;"
           >
             {{ labelFor(colId) }}
             <span v-if="isSortable(colId)" class="sort-arrow">{{ sortArrow(colId) }}</span>
+            <div
+              style="position: absolute; right: 0; top: 0; bottom: 0; width: 6px; cursor: col-resize; z-index: 2;"
+              @mousedown="startColumnResize($event, colId)"
+            ></div>
           </th>
           <th id="actions-header" data-col-id="__actions">Действия</th>
         </tr>
@@ -63,11 +73,13 @@ import { SYSTEM_TABLE_COLUMNS, DEFAULT_TABLE_COLUMNS, SYSTEM_FIELD_IDS_IN_CONFIG
 import type { TableColumn } from '@/constants';
 import PipetteRow from './PipetteRow.vue';
 import { useToastStore } from '@/stores/toast';
+import { useModals } from '@/composables/useModals';
 
 const pip = usePipettesStore();
 const prefs = usePrefsStore();
 const settings = useSettingsStore();
 const toast = useToastStore();
+const modals = useModals();
 
 // Все доступные колонки (системные + кастомные)
 const allColumns = computed<TableColumn[]>(() => {
@@ -106,7 +118,6 @@ const columns = computed<string[]>(() => {
   const cols: string[] = [];
   const added = new Set<string>();
 
-  // 1) Порядок из prefs.columnOrder
   if (Array.isArray(prefs.columnOrder) && prefs.columnOrder.length > 0) {
     for (const id of prefs.columnOrder) {
       if (added.has(id)) continue;
@@ -121,7 +132,6 @@ const columns = computed<string[]>(() => {
     }
   }
 
-  // 2) Видимые из fields, которых нет в columnOrder
   for (const f of settings.fields) {
     if (!f.enabled) continue;
     if (!visible.has(f.id)) continue;
@@ -131,7 +141,6 @@ const columns = computed<string[]>(() => {
     if (def) { cols.push(tableId); added.add(tableId); }
   }
 
-  // 3) Виртуальные (status, nextCalibration)
   for (const vid of ['status', 'nextCalibration']) {
     if (!visible.has(vid)) continue;
     if (added.has(vid)) continue;
@@ -188,10 +197,92 @@ function sortArrow(colId: string): string {
   return pip.sortDir > 0 ? '▲' : '▼';
 }
 
-async function onHeaderClick(colId: string) {
+// --- Resize + Drag&Drop ---
+
+let _colDragState: { srcColId: string } | null = null;
+let _colResizeState: { colId: string } | null = null;
+
+async function onHeaderClick(colId: string, _e?: MouseEvent) {
+  if (_colResizeState || _colDragState) return;
   const def = allColumns.value.find(c => c.id === colId);
   if (!def?.sortable) return;
   await pip.sortBy(def.field);
+}
+
+function startColumnResize(e: MouseEvent, colId: string) {
+  e.preventDefault();
+  e.stopPropagation();
+  const table = document.getElementById('pipettes-table');
+  if (!table) return;
+  const th = (e.target as HTMLElement).closest('th');
+  if (!th || !th.parentElement) return;
+
+  const startX = e.clientX;
+  const startWidth = th.getBoundingClientRect().width;
+  const idx = Array.from(th.parentElement.children).indexOf(th) + 1;
+  const colEl = table.querySelector(`colgroup col:nth-child(${idx})`) as HTMLElement | null;
+
+  function onMouseMove(ev: MouseEvent) {
+    const delta = ev.clientX - startX;
+    const newWidth = Math.max(50, Math.round(startWidth + delta));
+    if (colEl) colEl.style.width = newWidth + 'px';
+    if (typeof prefs.setColumnWidth === 'function') {
+      prefs.setColumnWidth(colId, newWidth);
+    }
+  }
+
+  function onMouseUp() {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+    document.body.style.cursor = '';
+    _colResizeState = null;
+  }
+
+  document.body.style.cursor = 'col-resize';
+  _colResizeState = { colId };
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function onDragStart(e: DragEvent, colId: string) {
+  if (_colResizeState) { e.preventDefault(); return; }
+  _colDragState = { srcColId: colId };
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', colId);
+  }
+}
+
+function onDragOver(e: DragEvent) {
+  e.preventDefault();
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+}
+
+function onDrop(e: DragEvent, targetColId: string) {
+  e.preventDefault();
+  if (!_colDragState || _colDragState.srcColId === targetColId) {
+    _colDragState = null;
+    return;
+  }
+  const src = _colDragState.srcColId;
+  const base = Array.isArray(prefs.columnOrder) ? prefs.columnOrder : [];
+  const currentOrder = base.length ? [...base] : columns.value.slice();
+
+  const srcIdx = currentOrder.indexOf(src);
+  const dstIdx = currentOrder.indexOf(targetColId);
+
+  if (srcIdx !== -1 && dstIdx !== -1) {
+    currentOrder.splice(srcIdx, 1);
+    currentOrder.splice(dstIdx, 0, src);
+    if (typeof prefs.setColumnOrder === 'function') {
+      prefs.setColumnOrder(currentOrder);
+    }
+  }
+  _colDragState = null;
+}
+
+function onDragEnd() {
+  _colDragState = null;
 }
 
 function onSelectAll(e: Event) {
@@ -201,9 +292,6 @@ function onSelectAll(e: Event) {
 function onToggleSelect(id: string, checked: boolean) {
   pip.toggleSelected(id, checked);
 }
-
-fimport { useModals } from '@/composables/useModals';
-const modals = useModals();
 
 function onRowActions(id: string, event: MouseEvent) {
   modals.onRowActions(id, event);
