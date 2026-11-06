@@ -48,3 +48,38 @@ export const COLORS = {
   muted: '#64748b',
   faint: '#94a3b8',
 };
+
+// Системные колонки таблицы
+export interface TableColumn {
+  id: string;
+  label: string;
+  sortable: boolean;
+  field: string;
+}
+
+export const SYSTEM_TABLE_COLUMNS: TableColumn[] = [
+  { id: 'id',              label: 'ID',            sortable: true,  field: 'id' },
+  { id: 'type',            label: 'Тип',           sortable: true,  field: 'equipmentType' },
+  { id: 'model',           label: 'Модель',        sortable: true,  field: 'model' },
+  { id: 'volume',          label: 'Объём',         sortable: true,  field: 'volume' },
+  { id: 'department',      label: 'Отдел',         sortable: true,  field: 'department' },
+  { id: 'lastCalibration', label: 'Поверка',       sortable: true,  field: 'lastCalibration' },
+  { id: 'nextCalibration', label: 'Следующая',     sortable: true,  field: 'nextCalibration' },
+  { id: 'responsible',     label: 'Ответственный', sortable: true,  field: 'responsible' },
+  { id: 'location',        label: 'Место',         sortable: false, field: 'location' },
+  { id: 'manufacturer',    label: 'Производитель', sortable: false, field: 'manufacturer' },
+  { id: 'serial',          label: 'Серийный',      sortable: false, field: 'serial' },
+  { id: 'cert',            label: 'Свидетельство', sortable: false, field: 'cert' },
+  { id: 'status',          label: 'Статус',        sortable: true,  field: 'status' },
+];
+
+export const SYSTEM_FIELD_IDS_IN_CONFIG = new Set([
+  'id', 'serial', 'manufacturer', 'model', 'equipmentType',
+  'volume', 'department', 'interval', 'lastCalibration', 'cert',
+  'result', 'active', 'responsible', 'location', 'notes',
+]);
+
+export const DEFAULT_TABLE_COLUMNS = [
+  'id', 'type', 'model', 'volume', 'department',
+  'lastCalibration', 'nextCalibration', 'responsible', 'status',
+];
