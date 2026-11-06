@@ -23,6 +23,11 @@
   <UserEditModal />
   <TempPasswordModal />
   <HistoryExportModal />
+
+  <AuditModal />
+  <EquipmentAuditModal />
+  <HotkeysModal />
+  <RemindersModal />
 </template>
 
 <script setup lang="ts">
@@ -50,6 +55,10 @@ import SettingsModal from '@/components/settings/SettingsModal.vue';
 import UserEditModal from '@/components/modals/UserEditModal.vue';
 import TempPasswordModal from '@/components/modals/TempPasswordModal.vue';
 import HistoryExportModal from '@/components/modals/HistoryExportModal.vue';
+import AuditModal from '@/components/modals/AuditModal.vue';
+import EquipmentAuditModal from '@/components/modals/EquipmentAuditModal.vue';
+import HotkeysModal from '@/components/modals/HotkeysModal.vue';
+import RemindersModal from '@/components/modals/RemindersModal.vue';
 const auth = useAuthStore();
 const router = useRouter();
 const ui = useUiStore();
