@@ -5,6 +5,27 @@
       <span class="bulk-label">
         <i class="fa-solid fa-bolt"></i> Выбрано: <b>{{ pip.selected.size }}</b>
       </span>
+      <button
+        v-if="perm.canBulkSend.value"
+        class="btn btn-info btn-sm"
+        @click="modals.openBulkSend()"
+      >
+        <i class="fa-solid fa-box"></i> Отправить
+      </button>
+      <button
+        v-if="perm.canBulkReturn.value"
+        class="btn btn-success btn-sm"
+        @click="modals.openBulkReturn()"
+      >
+        <i class="fa-solid fa-box-open"></i> Вернуть
+      </button>
+      <button
+        v-if="perm.canBulkChangeResponsible.value"
+        class="btn btn-secondary btn-sm"
+        @click="modals.openBulkResponsible()"
+      >
+        <i class="fa-solid fa-user-pen"></i> Ответственный
+      </button>
       <button class="btn btn-secondary btn-sm" @click="pip.clearSelection()">
         <i class="fa-solid fa-xmark"></i> Снять
       </button>
@@ -25,7 +46,11 @@
     </button>
 
     <!-- Сканировать -->
-    <button class="btn btn-info" @click="onScan" title="Сканировать штрихкод">
+    <button
+      class="btn btn-info"
+      @click="modals.openBarcodeScanner()"
+      title="Сканировать штрихкод"
+    >
       <i class="fa-solid fa-barcode"></i> Сканировать
     </button>
 
@@ -75,7 +100,10 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { usePipettesStore } from '@/stores/pipettes';
 import { useToastStore } from '@/stores/toast';
 import { useModals } from '@/composables/useModals';
+import { usePermissions } from '@/stores/auth';
+
 const modals = useModals();
+const perm = usePermissions();
 const pip = usePipettesStore();
 const toast = useToastStore();
 const menuOpen = ref(false);
@@ -94,16 +122,23 @@ function onSearchInput(e: Event) {
 function closeMenuAnd(action: string) {
   menuOpen.value = false;
   switch (action) {
-    case 'compact':
+    case 'compact': {
       document.body.classList.toggle('compact-mode');
       try {
         const on = document.body.classList.contains('compact-mode');
         localStorage.setItem('pipette_compact_mode', on ? '1' : '0');
       } catch { /* ignore */ }
-    break;
+      break;
+    }
     case 'add':
-     modals.openForm();
-     break;
+      modals.openForm();
+      break;
+    case 'labels':
+      modals.openBarcodePrint();
+      break;
+    case 'import':
+      modals.openImport();
+      break;
     default:
       toast.show(`Действие «${action}» — в следующих блоках`, 'warn');
   }
@@ -111,9 +146,6 @@ function closeMenuAnd(action: string) {
 
 function onFilterClick() {
   toast.show('Фильтр-панель — в Блоке 4', 'warn');
-}
-function onScan() {
-  toast.show('Сканер — в Блоке 5', 'warn');
 }
 
 function closeOnOutsideClick(e: MouseEvent) {
