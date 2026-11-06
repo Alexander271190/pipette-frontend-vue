@@ -74,7 +74,8 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { usePipettesStore } from '@/stores/pipettes';
 import { useToastStore } from '@/stores/toast';
-
+import { useModals } from '@/composables/useModals';
+const modals = useModals();
 const pip = usePipettesStore();
 const toast = useToastStore();
 const menuOpen = ref(false);
@@ -99,7 +100,10 @@ function closeMenuAnd(action: string) {
         const on = document.body.classList.contains('compact-mode');
         localStorage.setItem('pipette_compact_mode', on ? '1' : '0');
       } catch { /* ignore */ }
-      break;
+    break;
+    case 'add':
+     modals.openForm();
+     break;
     default:
       toast.show(`Действие «${action}» — в следующих блоках`, 'warn');
   }
