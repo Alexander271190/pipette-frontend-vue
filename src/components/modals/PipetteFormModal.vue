@@ -5,85 +5,109 @@
       {{ isEdit ? 'Редактировать оборудование' : 'Добавить оборудование' }}
     </h2>
 
-    <div v-if="loadingData" style="text-align:center;padding:30px;color:#94a3b8;">
-      <i class="fa-solid fa-spinner fa-spin"></i> Загрузка…
+    <!-- Шаблон (только при создании и только админ) -->
+    <div v-if="!isEdit && auth.isAdmin" class="template-bar">
+      <label class="template-bar-label">
+        <i class="fa-solid fa-clone"></i> Шаблон:
+      </label>
+      <select :value="selectedTemplateId" @change="applyTemplate(Number(($event.target as HTMLSelectElement).value))">
+        <option :value="0">— без шаблона —</option>
+        <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
+      </select>
+      <button type="button" class="btn btn-secondary btn-sm" @click="onSaveAsTemplate" :disabled="!hasAnyFilled">
+        <i class="fa-solid fa-floppy-disk"></i> Сохранить как шаблон
+      </button>
     </div>
 
-    <form v-else @submit.prevent="onSubmit" novalidate>
-      <div v-for="f in visibleFields" :key="f.id" class="form-group">
-        <label>{{ f.label }}<span v-if="f.required"> *</span></label>
+    <!-- Вкладки (только при создании) -->
+    <div v-if="!isEdit" class="add-tabs">
+      <button type="button" class="add-tab" :class="{ active: tab === 'single' }" @click="tab = 'single'">
+        <i class="fa-solid fa-cube"></i> Одна единица
+      </button>
+      <button type="button" class="add-tab" :class="{ active: tab === 'batch' }" @click="tab = 'batch'">
+        <i class="fa-solid fa-table-list"></i> Партия (таблица)
+      </button>
+    </div>
 
-        <!-- ID -->
-        <input
-          v-if="f.id === 'id'"
-          v-model="form[f.id]"
-          type="text"
-          :readonly="isEdit"
-          :disabled="isEdit"
-          :style="isEdit ? { background: '#f1f5f9', cursor: 'not-allowed' } : {}"
-          :title="isEdit ? 'ID присваивается автоматически' : ''"
-        />
+    <!-- Вкладка «Партия» -->
+    <div v-if="!isEdit && tab === 'batch'">
+      <BulkCreateTab @cancel="close" @created="onBulkCreated" />
+    </div>
 
-        <!-- select -->
-        <select
-          v-else-if="f.type === 'select'"
-          v-model="form[f.id]"
-          :disabled="isFieldDisabled(f.id)"
-          :style="isFieldDisabled(f.id) ? { background: '#f1f5f9', cursor: 'not-allowed' } : {}"
-          @change="onSelectChange(f.id, $event)"
-        >
-          <option v-for="opt in getOptions(f)" :key="String(opt.value)" :value="opt.value">{{ opt.label }}</option>
-        </select>
-
-        <!-- textarea -->
-        <textarea
-          v-else-if="f.type === 'textarea'"
-          v-model="form[f.id]"
-          rows="2"
-          :placeholder="f.label"
-        ></textarea>
-
-        <!-- date -->
-        <input
-          v-else-if="f.type === 'date'"
-          v-model="form[f.id]"
-          type="date"
-        />
-
-        <!-- number -->
-        <input
-          v-else-if="f.type === 'number'"
-          v-model="form[f.id]"
-          type="number"
-        />
-
-        <!-- text (default) -->
-        <input
-          v-else
-          v-model="form[f.id]"
-          type="text"
-          :placeholder="f.label"
-          :disabled="isFieldDisabled(f.id)"
-          :style="isFieldDisabled(f.id) ? { background: '#f1f5f9', cursor: 'not-allowed' } : {}"
-        />
+    <!-- Вкладка «Одна единица» / Редактирование -->
+    <div v-else>
+      <div v-if="loadingData" style="text-align:center;padding:30px;color:#94a3b8;">
+        <i class="fa-solid fa-spinner fa-spin"></i> Загрузка…
       </div>
 
-      <div v-if="error" class="auth-error" style="margin-top:8px;visibility:visible;opacity:1;">{{ error }}</div>
-
-      <div class="form-actions">
-        <button type="button" class="btn btn-secondary" @click="close">Отмена</button>
-        <button type="submit" class="btn btn-success" :disabled="saving">
-          <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
-          {{ saving ? 'Сохранение…' : 'Сохранить' }}
-        </button>
+      <!-- Черновик -->
+      <div v-if="draft" class="warning-block" style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <strong><i class="fa-solid fa-pencil"></i> Черновик от {{ draft.isMine ? draft.userFullName + ' (вы)' : draft.userFullName }}</strong>
+            <div style="font-size:.8rem;margin-top:4px;opacity:.85;">
+              {{ formatDraftDate(draft.updatedAt) }} · Данные подставлены в поля. Проверьте и сохраните.
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" @click="discardDraft">
+            <i class="fa-solid fa-rotate-left"></i> Отменить черновик
+          </button>
+        </div>
       </div>
-    </form>
+
+      <form v-if="!loadingData" @submit.prevent="onSubmit" novalidate>
+        <div v-for="f in visibleFields" :key="f.id" class="form-group">
+          <label>{{ f.label }}<span v-if="f.required"> *</span></label>
+
+          <input
+            v-if="f.id === 'id'"
+            v-model="form[f.id]"
+            type="text"
+            :readonly="isEdit"
+            :disabled="isEdit"
+            :style="isEdit ? { background: '#f1f5f9', cursor: 'not-allowed' } : {}"
+            :title="isEdit ? 'ID присваивается автоматически' : ''"
+          />
+          <select
+            v-else-if="f.type === 'select'"
+            v-model="form[f.id]"
+            :disabled="isFieldDisabled(f.id)"
+            :style="isFieldDisabled(f.id) ? { background: '#f1f5f9', cursor: 'not-allowed' } : {}"
+            @change="onSelectChange(f.id, $event)"
+          >
+            <option v-for="opt in getOptions(f)" :key="String(opt.value)" :value="opt.value">{{ opt.label }}</option>
+          </select>
+          <textarea v-else-if="f.type === 'textarea'" v-model="form[f.id]" rows="2" :placeholder="f.label"></textarea>
+          <input v-else-if="f.type === 'date'" v-model="form[f.id]" type="date" />
+          <input v-else-if="f.type === 'number'" v-model="form[f.id]" type="number" />
+          <input
+            v-else
+            v-model="form[f.id]"
+            type="text"
+            :placeholder="f.label"
+            :disabled="isFieldDisabled(f.id)"
+            :style="isFieldDisabled(f.id) ? { background: '#f1f5f9', cursor: 'not-allowed' } : {}"
+          />
+        </div>
+
+        <div v-if="error" class="auth-error" style="margin-top:8px;visibility:visible;opacity:1;">{{ error }}</div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-secondary" @click="close">Отмена</button>
+          <button type="submit" class="btn btn-success" :disabled="saving">
+            <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
+            {{ saving ? 'Сохранение…' : 'Сохранить' }}
+          </button>
+        </div>
+      </form>
+    </div>
   </AppModal>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue';
 import AppModal from '@/components/ui/AppModal.vue';
+import BulkCreateTab from './BulkCreateTab.vue';
 import { useUiStore } from '@/stores/ui';
 import { useAuthStore } from '@/stores/auth';
 import { useSettingsStore } from '@/stores/settings';
@@ -91,10 +115,13 @@ import { usePipettesStore } from '@/stores/pipettes';
 import { useStatsStore } from '@/stores/stats';
 import { useToastStore } from '@/stores/toast';
 import { showLockWarning } from '@/composables/useLockWarning';
+import { showPrompt } from '@/composables/usePrompt';
 import { todayStr } from '@/utils/format';
 import * as api from '@/api/pipettes';
+import * as tplApi from '@/api/templates';
 import type { FieldConfig } from '@/api/settings';
 import type { Pipette } from '@/types';
+import type { DraftData } from '@/api/pipettes';
 
 const ui = useUiStore();
 const auth = useAuthStore();
@@ -103,21 +130,29 @@ const pip = usePipettesStore();
 const stats = useStatsStore();
 const toast = useToastStore();
 
+const tab = ref<'single' | 'batch'>('single');
 const form = ref<Record<string, string>>({});
 const loadingData = ref(false);
 const saving = ref(false);
 const error = ref('');
 const editId = ref<string | null>(null);
+const draft = ref<DraftData | null>(null);
+
+const templates = ref<tplApi.EquipmentTemplate[]>([]);
+const selectedTemplateId = ref(0);
 
 let _heartbeat: number | null = null;
 let _skipUnlock = false;
 
 const isEdit = computed(() => !!editId.value);
-const visibleFields = computed<FieldConfig[]>(() => {
-  return settings.fields.filter(f => f.enabled).sort((a, b) => (a.order || 0) - (b.order || 0));
+const visibleFields = computed<FieldConfig[]>(() =>
+  settings.fields.filter(f => f.enabled).sort((a, b) => (a.order || 0) - (b.order || 0))
+);
+
+const hasAnyFilled = computed(() => {
+  return Object.values(form.value).some(v => v && v.trim && v.trim() !== '');
 });
 
-// Спецобработчики для select-полей
 function getOptions(f: FieldConfig): { value: string; label: string }[] {
   if (f.id === 'equipmentType') {
     return settings.equipmentTypes.map(t => ({ value: t.value, label: t.label }));
@@ -146,7 +181,6 @@ function getOptions(f: FieldConfig): { value: string; label: string }[] {
     if (!f.required) opts.push({ value: '', label: '— не указан —' });
     const self = auth.user?.fullName || '';
     if (auth.isAdmin) {
-      // TODO: загрузить responsibles, показываем только себя и тех, что уже есть
       if (self) opts.push({ value: self, label: self });
       const current = form.value.responsible;
       if (current && current !== self) opts.push({ value: current, label: current });
@@ -157,12 +191,9 @@ function getOptions(f: FieldConfig): { value: string; label: string }[] {
     }
     return opts;
   }
-  // Кастомный select — из options
   const raw = Array.isArray(f.options) ? f.options : [];
   const opts = raw.map(o => ({ value: o, label: o }));
-  if (!f.required && !opts.some(o => o.value === '')) {
-    return [{ value: '', label: '—' }, ...opts];
-  }
+  if (!f.required && !opts.some(o => o.value === '')) return [{ value: '', label: '—' }, ...opts];
   return opts;
 }
 
@@ -174,13 +205,9 @@ function isFieldDisabled(fid: string): boolean {
 
 async function onSelectChange(fid: string, e: Event) {
   if (fid === 'equipmentType') {
-    // Обновить interval
     const typeVal = (e.target as HTMLSelectElement).value;
     const t = settings.equipmentTypes.find(x => x.value === typeVal);
-    const interval = t?.interval && t.interval > 0 ? t.interval : 12;
-    if ('interval' in form.value) form.value.interval = String(interval);
-
-    // Обновить ID (только при создании)
+    if ('interval' in form.value) form.value.interval = String(t?.interval && t.interval > 0 ? t.interval : 12);
     if (!isEdit.value) {
       try {
         const res = await api.getNextId(typeVal);
@@ -190,17 +217,25 @@ async function onSelectChange(fid: string, e: Event) {
   }
 }
 
+function formatDraftDate(s: string): string {
+  const d = new Date(s);
+  if (isNaN(d.getTime())) return s;
+  return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
 async function openForm() {
   const data = ui.modalData as string | null;
   editId.value = data || null;
   error.value = '';
   form.value = {};
+  draft.value = null;
+  selectedTemplateId.value = 0;
   _skipUnlock = false;
+  tab.value = 'single';
 
   loadingData.value = true;
 
   try {
-    // 1) Проверка блокировки при edit
     if (editId.value) {
       try {
         const lockRes = await api.getLock(editId.value);
@@ -210,7 +245,6 @@ async function openForm() {
         }
         await api.setLock(editId.value);
 
-        // Heartbeat
         _heartbeat = window.setInterval(async () => {
           if (!editId.value) return;
           try {
@@ -223,23 +257,20 @@ async function openForm() {
             }
           } catch { /* ignore */ }
         }, 3000);
-      } catch (e) {
+      } catch {
         toast.error('Ошибка проверки блокировки');
         ui.close();
         return;
       }
-    }
 
-    // 2) Загрузить данные
-    if (editId.value) {
       let p: Pipette | null = pip.items.find(x => x.id === editId.value) || null;
+      let fresh: api.GetByIdResponse | null = null;
       try {
-        const fresh = await api.getById(editId.value);
+        fresh = await api.getById(editId.value) as api.GetByIdResponse;
         if (fresh) p = fresh;
       } catch { /* ignore */ }
       if (!p) { toast.error('Оборудование не найдено'); ui.close(); return; }
 
-      // Заполнить form
       const f: Record<string, string> = {};
       for (const field of visibleFields.value) {
         let v: unknown = (p as Record<string, unknown>)[field.id];
@@ -252,9 +283,19 @@ async function openForm() {
         if (field.id === 'active') v = p.active ? 'true' : 'false';
         f[field.id] = v == null ? '' : String(v);
       }
+
+      // Черновик
+      if (fresh?.draft) {
+        draft.value = fresh.draft;
+        Object.assign(f, fresh.draft.data);
+      }
       form.value = f;
     } else {
-      // Создание — defaults
+      // Загрузка шаблонов (только при создании и только админ)
+      if (auth.isAdmin) {
+        try { templates.value = await tplApi.getTemplates(); } catch { templates.value = []; }
+      }
+
       let nextId = '';
       try {
         const res = await api.getNextId('pipette');
@@ -268,7 +309,7 @@ async function openForm() {
         result: 'pass',
         active: 'true',
       };
-      if (isFieldVisible('equipmentType')) defaults.equipmentType = 'pipette';
+      if (visibleFields.value.some(f => f.id === 'equipmentType')) defaults.equipmentType = 'pipette';
       if (!auth.isAdmin) {
         if (auth.user?.isActing && auth.user?.actingForName) {
           defaults.responsible = auth.user.actingForName;
@@ -287,10 +328,6 @@ async function openForm() {
   }
 }
 
-function isFieldVisible(fid: string): boolean {
-  return visibleFields.value.some(f => f.id === fid);
-}
-
 watch(() => ui.activeModal, (v) => {
   if (v === 'form') openForm();
 });
@@ -302,20 +339,78 @@ onUnmounted(async () => {
   }
 });
 
+function applyTemplate(templateId: number) {
+  selectedTemplateId.value = templateId;
+  if (!templateId) return;
+  const tpl = templates.value.find(t => t.id === templateId);
+  if (!tpl) return;
+  let applied = 0;
+  for (const [fieldId, value] of Object.entries(tpl.data || {})) {
+    if (value === undefined || value === null || value === '') continue;
+    if (!(fieldId in form.value)) continue;
+    if (form.value[fieldId] === String(value)) continue;
+    form.value[fieldId] = String(value);
+    applied++;
+  }
+  toast.success(`Применено полей: ${applied}`);
+}
+
+async function onSaveAsTemplate() {
+  if (!auth.isAdmin) { toast.error('Только админ может создавать шаблоны'); return; }
+  const name = await showPrompt(
+    'Название шаблона',
+    {
+      icon: 'fa-floppy-disk', title: 'Сохранение шаблона',
+      okText: 'Сохранить', okClass: 'btn-success',
+      placeholder: 'Например: Eppendorf 1000 мкл',
+      validator: (v) => v ? null : 'Укажите название',
+    }
+  );
+  if (!name) return;
+
+  const data: Record<string, string> = {};
+  const skip = ['id', 'barcode', 'responsible', 'location'];
+  for (const [k, v] of Object.entries(form.value)) {
+    if (skip.includes(k)) continue;
+    if (!v || !v.trim()) continue;
+    data[k] = v;
+  }
+  if (Object.keys(data).length === 0) { toast.error('Заполните хотя бы одно поле'); return; }
+
+  try {
+    await tplApi.saveTemplate(name.trim(), data);
+    toast.success('Шаблон сохранён');
+    templates.value = await tplApi.getTemplates();
+    const created = templates.value.find(t => t.name === name.trim());
+    if (created) selectedTemplateId.value = created.id;
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : 'Ошибка');
+  }
+}
+
+async function discardDraft() {
+  if (!editId.value) return;
+  try {
+    await api.deleteDraft(editId.value);
+    toast.success('Черновик отменён');
+    draft.value = null;
+    // Перезагружаем чистые данные
+    await openForm();
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : 'Ошибка');
+  }
+}
+
 async function onSubmit() {
   error.value = '';
-  const payload: Record<string, string> = { ...form.value };
+  const payload = { ...form.value };
 
-  // Проверка обязательных
   const missing: string[] = [];
   for (const f of visibleFields.value) {
     if (!f.required) continue;
     if (!String(payload[f.id] || '').trim()) missing.push(f.label);
   }
-  if (missing.length) {
-    error.value = 'Заполните: ' + missing.join(', ');
-    return;
-  }
+  if (missing.length) { error.value = 'Заполните: ' + missing.join(', '); return; }
 
   saving.value = true;
   try {
@@ -335,6 +430,10 @@ async function onSubmit() {
   } finally {
     saving.value = false;
   }
+}
+
+function onBulkCreated(_count: number) {
+  ui.close();
 }
 
 async function close() {
