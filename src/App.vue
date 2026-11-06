@@ -4,12 +4,19 @@
   <ConfirmHost />
   <PromptHost />
   <RowActionsMenu />
-  <!-- Глобальные модалки -->
+
   <PipetteFormModal />
   <HistoryModal />
   <QuickCalModal />
   <TransferModal />
   <ChangePasswordModal />
+
+  <BulkSendModal />
+  <BulkReturnModal />
+  <BulkResponsibleModal />
+  <BarcodeScannerModal />
+  <BarcodePrintModal />
+  <ImportModal />
 </template>
 
 <script setup lang="ts">
@@ -27,6 +34,12 @@ import HistoryModal from '@/components/modals/HistoryModal.vue';
 import QuickCalModal from '@/components/modals/QuickCalModal.vue';
 import TransferModal from '@/components/modals/TransferModal.vue';
 import ChangePasswordModal from '@/components/modals/ChangePasswordModal.vue';
+import BulkSendModal from '@/components/modals/BulkSendModal.vue';
+import BulkReturnModal from '@/components/modals/BulkReturnModal.vue';
+import BulkResponsibleModal from '@/components/modals/BulkResponsibleModal.vue';
+import BarcodeScannerModal from '@/components/modals/BarcodeScannerModal.vue';
+import BarcodePrintModal from '@/components/modals/BarcodePrintModal.vue';
+import ImportModal from '@/components/modals/ImportModal.vue';
 
 const auth = useAuthStore();
 const router = useRouter();
@@ -40,8 +53,6 @@ onMounted(() => {
     if (router.currentRoute.value.path !== '/login') router.push('/login');
   });
 
-  setPasswordRequiredHandler((mode) => {
-    ui.open('changePassword', mode);
-  });
+  setPasswordRequiredHandler((mode) => ui.open('changePassword', mode));
 });
 </script>
