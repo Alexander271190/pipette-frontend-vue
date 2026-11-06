@@ -1,39 +1,36 @@
 <template>
-  <div style="min-height:100vh;padding:40px;font-family:system-ui,sans-serif;background:#f5f7fb;">
-    <div style="max-width:700px;margin:0 auto;background:#fff;padding:32px;border-radius:16px;box-shadow:0 4px 16px rgba(0,0,0,.06);">
-      <h1 style="color:#16a34a;margin:0 0 12px;">✓ Вход выполнен</h1>
-      <p style="color:#475569;margin-bottom:8px;">
-        <strong>{{ auth.user?.fullName }}</strong> — {{ auth.user?.position }}
-      </p>
-      <p style="color:#94a3b8;font-size:.9rem;">
-        Роль: {{ auth.user?.roleName || auth.user?.role }}<br>
-        Отдел: {{ auth.user?.department || '—' }}<br>
-        Админ: {{ auth.isAdmin ? 'да' : 'нет' }}
-      </p>
-      <div style="margin-top:24px;">
-        <button class="btn btn-secondary" @click="onLogout">
-          <i class="fa-solid fa-right-from-bracket"></i> Выйти
-        </button>
-      </div>
-      <p style="color:#94a3b8;font-size:.8rem;margin-top:24px;">
-        Блок 3: здесь будет Header + Toolbar + Таблица с данными из API.
-      </p>
-    </div>
-  </div>
+  <AppLayout>
+    <AppToolbar />
+    <PipetteTable />
+    <Pagination />
+  </AppLayout>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
-import { useToastStore } from '@/stores/toast';
+import { onMounted } from 'vue';
+import AppLayout from '@/components/layout/AppLayout.vue';
+import AppToolbar from '@/components/layout/AppToolbar.vue';
+import PipetteTable from '@/components/table/PipetteTable.vue';
+import Pagination from '@/components/table/Pagination.vue';
+import { usePrefsStore } from '@/stores/prefs';
+import { useSettingsStore } from '@/stores/settings';
+import { useStatsStore } from '@/stores/stats';
+import { usePipettesStore } from '@/stores/pipettes';
 
-const auth = useAuthStore();
-const toast = useToastStore();
-const router = useRouter();
+const prefs = usePrefsStore();
+const settings = useSettingsStore();
+const stats = useStatsStore();
+const pip = usePipettesStore();
 
-function onLogout() {
-  auth.logout();
-  toast.success('Вы вышли из системы');
-  router.push('/login');
-}
+onMounted(async () => {
+  // 1) Настройки + prefs параллельно
+  await Promise.all([settings.loadAll(), prefs.load()]);
+
+  // 2) Синхронизировать visibleFields с активными полями
+  const activeFieldIds = settings.fields.filter(f => f.enabled).map(f => f.id);
+  prefs.syncWithFields(activeFieldIds);
+
+  // 3) Данные таблицы + статистика параллельно
+  await Promise.all([pip.loadPaged(), stats.load()]);
+});
 </script>
