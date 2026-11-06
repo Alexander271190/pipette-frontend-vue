@@ -52,6 +52,13 @@ import DepartmentsSettings from './DepartmentsSettings.vue';
 import FiltersSettings from './FiltersSettings.vue';
 import ExportSettings from './ExportSettings.vue';
 import EquipmentTypesSettings from './EquipmentTypesSettings.vue';
+import UsersSettings from './UsersSettings.vue';
+import RolesSettings from './RolesSettings.vue';
+import ViewTemplatesSettings from './ViewTemplatesSettings.vue';
+import PrintersSettings from './PrintersSettings.vue';
+import BarcodesSettings from './BarcodesSettings.vue';
+import HelpSettings from './HelpSettings.vue';
+import GeneralSettings from './GeneralSettings.vue';
 
 const ui = useUiStore();
 const auth = useAuthStore();
@@ -64,31 +71,32 @@ const ALL_SECTIONS: Group[] = [
   {
     group: 'Оборудование и данные',
     items: [
-      { id: 'fields',     label: 'Поля формы',        component: FieldsSettings },
-      { id: 'departments',label: 'Отделы',            component: DepartmentsSettings },
-      { id: 'filters',    label: 'Фильтры',           component: FiltersSettings },
-      { id: 'export',     label: 'Печать документов', component: ExportSettings },
-      { id: 'equipment',  label: 'Типы оборудования', component: EquipmentTypesSettings },
+      { id: 'fields',          label: 'Поля формы',        component: FieldsSettings },
+      { id: 'departments',     label: 'Отделы',            component: DepartmentsSettings },
+      { id: 'filters',         label: 'Фильтры',           component: FiltersSettings },
+      { id: 'export',          label: 'Печать документов', component: ExportSettings },
+      { id: 'equipment',       label: 'Типы оборудования', component: EquipmentTypesSettings },
+      { id: 'view-templates',  label: 'Шаблоны вида',      component: ViewTemplatesSettings },
     ],
   },
   {
     group: 'Пользователи',
     items: [
-      { id: 'users', label: 'Пользователи' },
+      { id: 'users', label: 'Пользователи', component: UsersSettings },
     ],
   },
   {
     group: 'Печать и штрихкоды',
     items: [
-      { id: 'printers', label: 'Принтеры этикеток' },
-      { id: 'barcodes', label: 'Штрихкоды' },
+      { id: 'printers', label: 'Принтеры этикеток', component: PrintersSettings },
+      { id: 'barcodes', label: 'Штрихкоды',         component: BarcodesSettings },
     ],
   },
   {
     group: 'Общие',
     items: [
-      { id: 'help',    label: 'Справка' },
-      { id: 'general', label: 'Общие' },
+      { id: 'help',    label: 'Справка', component: HelpSettings },
+      { id: 'general', label: 'Общие',   component: GeneralSettings },
     ],
   },
 ];
@@ -121,14 +129,12 @@ watch(() => ui.activeModal, (v) => {
 
 function openSection(id: string) {
   currentSection.value = id;
-  // Найти компонент
   for (const g of ALL_SECTIONS) {
     const found = g.items.find(i => i.id === id);
     if (found) {
       if (found.component) {
         sectionComponent.value = found.component;
       } else {
-        // Заглушка для разделов из Блока 6B
         sectionComponent.value = {
           template: `<div style="text-align:center;padding:40px;color:#94a3b8;">
             <div style="font-size:2.5rem;margin-bottom:12px;">🚧</div>
