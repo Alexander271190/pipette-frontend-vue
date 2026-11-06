@@ -156,6 +156,12 @@ async function closeMenuAnd(action: string) {
     case 'pdf':
       await exportComposable.exportToPDF();
       break;
+   case 'audit':
+     modals.openAudit();
+      break;
+   case 'help':
+     modals.openHelp();
+      break;
     default:
       toast.show(`Действие «${action}» — в следующих блоках`, 'warn');
   }
