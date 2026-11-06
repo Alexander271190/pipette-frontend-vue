@@ -160,8 +160,33 @@ export function useModals() {
     }
   }
 
+  // Массовые операции
+function openBulkSend() {
+  const ids = [...pip.selected].filter(id => pip.items.some(p => p.id === id));
+  if (ids.length === 0) { toast.error('Ничего не выбрано'); return; }
+  ui.open('bulkSend', ids);
+}
+
+function openBulkReturn() {
+  const ids = [...pip.selected].filter(id => pip.items.some(p => p.id === id));
+  if (ids.length === 0) { toast.error('Ничего не выбрано'); return; }
+  ui.open('bulkReturn', ids);
+}
+
+function openBulkResponsible() {
+  const ids = [...pip.selected].filter(id => pip.items.some(p => p.id === id));
+  if (ids.length === 0) { toast.error('Ничего не выбрано'); return; }
+  ui.open('bulkResponsible', ids);
+}
+
+function openBarcodeScanner() { ui.open('barcodeScanner'); }
+function openBarcodePrint()   { ui.open('barcodePrint'); }
+function openImport()         { ui.open('import'); }
+
   return {
-    openForm, openHistory, openQuickCal, openTransfer, openChangePassword,
-    onRowActions, cancelSendConfirm, deleteConfirm,
-  };
+  openForm, openHistory, openQuickCal, openTransfer, openChangePassword,
+  onRowActions, cancelSendConfirm, deleteConfirm,
+  openBulkSend, openBulkReturn, openBulkResponsible,
+  openBarcodeScanner, openBarcodePrint, openImport,
+ };
 }
