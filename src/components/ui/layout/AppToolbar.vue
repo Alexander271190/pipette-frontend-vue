@@ -102,10 +102,12 @@ import { useToastStore } from '@/stores/toast';
 import { useModals } from '@/composables/useModals';
 import { usePermissions } from '@/stores/auth';
 import { useUiStore } from '@/stores/ui';
+import { useExport } from '@/composables/useExport';
 
 const modals = useModals();
 const perm = usePermissions();
 const ui = useUiStore();
+const exportComposable = useExport();
 const pip = usePipettesStore();
 const toast = useToastStore();
 const menuOpen = ref(false);
@@ -121,7 +123,7 @@ function onSearchInput(e: Event) {
   }, 150);
 }
 
-function closeMenuAnd(action: string) {
+async function closeMenuAnd(action: string) {
   menuOpen.value = false;
   switch (action) {
     case 'compact': {
@@ -147,6 +149,12 @@ function closeMenuAnd(action: string) {
         break;
       }
       ui.open('settings');
+      break;
+    case 'excel':
+      await exportComposable.exportToXlsx();
+      break;
+    case 'pdf':
+      await exportComposable.exportToPDF();
       break;
     default:
       toast.show(`Действие «${action}» — в следующих блоках`, 'warn');
