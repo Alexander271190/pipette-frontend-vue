@@ -45,8 +45,11 @@
     </template>
 
     <div class="form-actions">
-      <button type="button" class="btn btn-secondary" @click="close">Закрыть</button>
-    </div>
+      <button type="button" class="btn btn-warning" @click="onExportHistory">
+        <i class="fa-solid fa-print"></i> Печать истории
+     </button>
+     <button type="button" class="btn btn-secondary" @click="close">Закрыть</button>
+   </div>
   </AppModal>
 </template>
 
@@ -63,6 +66,8 @@ import { RESULT_LABELS } from '@/constants';
 import type { Pipette } from '@/types';
 import * as api from '@/api/pipettes';
 import type { CalibrationRecord } from '@/api/pipettes';
+import { useSettingsStore } from '@/stores/settings';
+const settings = useSettingsStore();
 
 const ui = useUiStore();
 const pip = usePipettesStore();
@@ -94,4 +99,14 @@ watch(() => ui.activeModal, async (v) => {
 });
 
 function close() { ui.close(); }
+
+function onExportHistory() {
+  if (!pipette.value) return;
+  if (settings.printDocs?.history === false) {
+    toast.error('Печать истории отключена');
+    return;
+  }
+  ui.open('historyExport', pipette.value.id);
+}
+  
 </script>
