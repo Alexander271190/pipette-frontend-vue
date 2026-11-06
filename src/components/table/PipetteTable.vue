@@ -202,9 +202,10 @@ function onToggleSelect(id: string, checked: boolean) {
   pip.toggleSelected(id, checked);
 }
 
+fimport { useModals } from '@/composables/useModals';
+const modals = useModals();
+
 function onRowActions(id: string, event: MouseEvent) {
-  event.stopPropagation();
-  // Реализуем полноценно в Блоке 4 (модалки CRUD)
-  toast.show(`Действия для ${id} — в Блоке 4`, 'warn');
+  modals.onRowActions(id, event);
 }
 </script>
