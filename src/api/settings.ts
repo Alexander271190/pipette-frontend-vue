@@ -87,3 +87,34 @@ export const getPrintDocsEffective = () => apiRequest<PrintDocsEffective>('/sett
 export const getMyPrefsEffective  = () => apiRequest<UserPrefsRaw>('/settings/my-preferences/effective');
 export const getMyPrefs           = () => apiRequest<UserPrefsRaw>('/settings/my-preferences');
 export const saveMyPrefs          = (data: UserPrefsRaw) => apiRequest('/settings/my-preferences', 'PUT', data);
+
+// ═══ МУТАЦИИ ═══
+export const saveFields = (fields: FieldConfig[]) =>
+  apiRequest<FieldConfig[]>('/settings/fields', 'PUT', fields);
+
+export const saveFieldsWithConfirm = (fields: FieldConfig[]) =>
+  apiRequest<FieldConfig[]>('/settings/fields?confirmDelete=true', 'PUT', fields);
+
+export interface DepartmentFull {
+  name: string;
+  enabled: boolean;
+  oldName?: string | null;
+}
+
+export const getDepartmentsFull = () =>
+  apiRequest<DepartmentFull[]>('/settings/departments-full');
+
+export const saveDepartments = (items: DepartmentFull[]) =>
+  apiRequest('/settings/departments', 'PUT', items);
+
+export const saveFilters = (filters: FilterConfig[]) =>
+  apiRequest('/settings/filters', 'PUT', filters);
+
+export const saveExport = (data: ExportSettingsRaw) =>
+  apiRequest('/settings/export', 'PUT', data);
+
+export const saveEquipmentTypes = (types: EquipmentType[]) =>
+  apiRequest<EquipmentType[]>('/settings/equipment-types', 'PUT', types);
+
+export const saveSystem = (data: Record<string, string>) =>
+  apiRequest('/settings/system', 'PUT', data);
