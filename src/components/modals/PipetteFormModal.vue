@@ -80,6 +80,24 @@
           <textarea v-else-if="f.type === 'textarea'" v-model="form[f.id]" rows="2" :placeholder="f.label"></textarea>
           <input v-else-if="f.type === 'date'" v-model="form[f.id]" type="date" />
           <input v-else-if="f.type === 'number'" v-model="form[f.id]" type="number" />
+          <div v-else-if="f.id === 'barcode'" style="display:flex;gap:6px;">
+            <input
+              v-model="form[f.id]"
+              type="text"
+              :placeholder="f.label"
+              style="flex:1;"
+              :disabled="isFieldDisabled(f.id)"
+              :style="isFieldDisabled(f.id) ? { background: '#f1f5f9', cursor: 'not-allowed' } : {}"
+            />
+            <button
+              type="button"
+              class="btn btn-secondary"
+              @click="generateBarcode"
+              title="Заполнить из инв. номера / серийного / ID"
+            >
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </button>
+          </div>
           <input
             v-else
             v-model="form[f.id]"
@@ -116,6 +134,7 @@ import { useStatsStore } from '@/stores/stats';
 import { useToastStore } from '@/stores/toast';
 import { showLockWarning } from '@/composables/useLockWarning';
 import { showPrompt } from '@/composables/usePrompt';
+import { showConfirm } from '@/composables/useConfirm';
 import { todayStr } from '@/utils/format';
 import * as api from '@/api/pipettes';
 import * as tplApi from '@/api/templates';
@@ -223,6 +242,15 @@ function formatDraftDate(s: string): string {
   return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function generateBarcode() {
+  const inv = form.value.inventorynumber;
+  const serial = form.value.serial;
+  const id = form.value.id;
+  const val = inv || serial || id;
+  if (val) form.value.barcode = String(val);
+  else toast.warn('Заполните инв. номер, серийный или ID');
+}
+
 async function openForm() {
   const data = ui.modalData as string | null;
   editId.value = data || null;
@@ -252,11 +280,25 @@ async function openForm() {
             if (!r.locked || !r.mine) {
               if (_heartbeat) { clearInterval(_heartbeat); _heartbeat = null; }
               _skipUnlock = true;
-              toast.warn(`Сессия завершена. Прибор забрал ${r.lockedBy || 'другой пользователь'}`);
+
+              // Сохраняем черновик из form.value (не из DOM — надёжнее)
+              let draftSaved = false;
+              try {
+                await api.saveDraft(editId.value, { ...form.value });
+                draftSaved = true;
+              } catch (e) { console.warn('Черновик не сохранён:', e); }
+
               ui.close();
+
+              const msg = draftSaved
+                ? `Сессия завершена. Прибор забрал ${r.lockedBy || 'другой пользователь'}.\n\nВаши данные сохранены как черновик.`
+                : `Сессия завершена. Прибор забрал ${r.lockedBy || 'другой пользователь'}.`;
+
+              toast.warn(msg);
             }
           } catch { /* ignore */ }
         }, 3000);
+
       } catch {
         toast.error('Ошибка проверки блокировки');
         ui.close();
@@ -394,7 +436,6 @@ async function discardDraft() {
     await api.deleteDraft(editId.value);
     toast.success('Черновик отменён');
     draft.value = null;
-    // Перезагружаем чистые данные
     await openForm();
   } catch (e) {
     toast.error(e instanceof Error ? e.message : 'Ошибка');
@@ -425,8 +466,31 @@ async function onSubmit() {
     ui.close();
     await pip.loadPaged();
     await stats.load();
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Ошибка сохранения';
+  } catch (e: unknown) {
+    const err = e as { status?: number; response?: { code?: string; draftAuthor?: string }; message?: string };
+    if (err?.status === 409 && err?.response?.code === 'draft_conflict' && editId.value) {
+      const author = err.response?.draftAuthor || 'другого пользователя';
+      const ok = await showConfirm(
+        `Найден несохранённый черновик от ${author}.\n\nЕсли вы сохраните сейчас — черновик будет удалён, данные ${author} потеряются.\n\nПродолжить?`,
+        { icon: '⚠️', title: 'Черновик от другого пользователя', okText: 'Перезаписать', okClass: 'btn-danger' }
+      );
+      if (!ok) { saving.value = false; return; }
+
+      try {
+        await api.deleteDraft(editId.value);
+        if (isEdit.value) await api.updatePipette(editId.value, payload);
+        else await api.createPipette(payload);
+        toast.success('Оборудование сохранено');
+        _skipUnlock = true;
+        ui.close();
+        await pip.loadPaged();
+        await stats.load();
+      } catch (err2) {
+        error.value = err2 instanceof Error ? err2.message : 'Ошибка перезаписи';
+      }
+    } else {
+      error.value = err.message || 'Ошибка сохранения';
+    }
   } finally {
     saving.value = false;
   }
