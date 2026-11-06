@@ -75,4 +75,59 @@ export function getById(id: string): Promise<Pipette> {
   return apiRequest<Pipette>(`/pipettes/${encodeURIComponent(id)}`);
 }
 
+// CRUD
+export function createPipette(payload: Record<string, unknown>): Promise<Pipette> {
+  return apiRequest<Pipette>('/pipettes', 'POST', payload);
+}
+export function updatePipette(id: string, payload: Record<string, unknown>): Promise<Pipette> {
+  return apiRequest<Pipette>(`/pipettes/${encodeURIComponent(id)}`, 'PUT', payload);
+}
+export function deletePipette(id: string) {
+  return apiRequest(`/pipettes/${encodeURIComponent(id)}`, 'DELETE');
+}
+export function cancelSend(id: string) {
+  return apiRequest(`/pipettes/${encodeURIComponent(id)}/cancel-send`, 'POST', {});
+}
+
+// Блокировки
+export interface LockInfo {
+  locked: boolean;
+  mine?: boolean;
+  lockedBy?: string;
+  lockedByPosition?: string;
+  pipetteId?: string;
+}
+export function getLock(id: string): Promise<LockInfo> {
+  return apiRequest<LockInfo>(`/pipettes/${encodeURIComponent(id)}/lock`);
+}
+export function setLock(id: string) {
+  return apiRequest(`/pipettes/${encodeURIComponent(id)}/lock`, 'POST', {});
+}
+export function releaseLock(id: string, force = false) {
+  const suffix = force ? '?force=true' : '';
+  return apiRequest(`/pipettes/${encodeURIComponent(id)}/lock${suffix}`, 'DELETE');
+}
+
+// Передача
+export function transferPipette(id: string, department: string, responsible: string) {
+  return apiRequest(`/pipettes/${encodeURIComponent(id)}/transfer`, 'POST', { department, responsible });
+}
+
+// История
+export interface CalibrationRecord {
+  id: number;
+  date: string;
+  cert?: string;
+  result: 'pass' | 'fail' | 'wip';
+  org?: string;
+  note?: string;
+}
+export function getCalibrationHistory(id: string): Promise<CalibrationRecord[]> {
+  return apiRequest<CalibrationRecord[]>(`/pipettes/${encodeURIComponent(id)}/calibration`);
+}
+export function addCalibration(id: string, payload: { date: string; cert: string; result: string; org: string; note: string }) {
+  return apiRequest(`/pipettes/${encodeURIComponent(id)}/calibration`, 'POST', payload);
+}
+
 export type { Status };
+
