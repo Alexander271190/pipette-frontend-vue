@@ -129,5 +129,29 @@ export function addCalibration(id: string, payload: { date: string; cert: string
   return apiRequest(`/pipettes/${encodeURIComponent(id)}/calibration`, 'POST', payload);
 }
 
+// Черновик
+export interface DraftData {
+  data: Record<string, string>;
+  userFullName: string;
+  isMine: boolean;
+  updatedAt: string;
+}
+
+export interface GetByIdResponse extends Pipette {
+  draft?: DraftData | null;
+}
+
+export function getDraft(id: string): Promise<{ draft: DraftData | null }> {
+  return apiRequest<{ draft: DraftData | null }>(`/pipettes/${encodeURIComponent(id)}/draft`);
+}
+
+export function saveDraft(id: string, data: Record<string, string>): Promise<void> {
+  return apiRequest<void>(`/pipettes/${encodeURIComponent(id)}/draft`, 'PUT', data);
+}
+
+export function deleteDraft(id: string): Promise<void> {
+  return apiRequest<void>(`/pipettes/${encodeURIComponent(id)}/draft`, 'DELETE');
+}
+
 export type { Status };
 
