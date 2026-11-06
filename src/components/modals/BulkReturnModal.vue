@@ -93,6 +93,9 @@
       <div v-if="error" class="auth-error" style="visibility:visible;opacity:1;">{{ error }}</div>
       <div class="form-actions">
         <button type="button" class="btn btn-secondary" @click="close">Отмена</button>
+        <button type="button" class="btn btn-info" @click="printAct">
+          <i class="fa-solid fa-print"></i> Распечатать акт
+        </button>
         <button type="submit" class="btn btn-success" :disabled="saving">
           <i class="fa-solid" :class="saving ? 'fa-spinner fa-spin' : 'fa-floppy-disk'"></i>
           Применить
@@ -110,7 +113,9 @@ import { usePipettesStore } from '@/stores/pipettes';
 import { useSettingsStore } from '@/stores/settings';
 import { useStatsStore } from '@/stores/stats';
 import { useToastStore } from '@/stores/toast';
+import { useAuthStore } from '@/stores/auth';
 import { todayStr, formatDate } from '@/utils/format';
+import { buildHeaderHtml } from '@/utils/header';
 import { isExternalCalibration } from '@/utils/equipment';
 import { getDeviceIdentityHtml } from '@/utils/deviceIdentity';
 import { showConfirm } from '@/composables/useConfirm';
@@ -122,6 +127,7 @@ const pip = usePipettesStore();
 const settings = useSettingsStore();
 const stats = useStatsStore();
 const toast = useToastStore();
+const auth = useAuthStore();
 
 const items = ref<Pipette[]>([]);
 const date = ref('');
@@ -252,4 +258,82 @@ function close() {
   }
   ui.close();
 }
+
+  function printAct() {
+  if (items.value.length === 0) { toast.error('Нет единиц'); return; }
+  if (settings.printDocs?.actReturn === false) { toast.error('Печать акта отключена'); return; }
+
+  const user = auth.user?.fullName || '';
+  const userPosition = auth.user?.position || '';
+  const today = new Date().toLocaleDateString('ru-RU');
+
+  const fields = (settings.printDocs?.actReturnFields?.length
+    ? settings.printDocs.actReturnFields
+    : ['id','model','manufacturer','serial','volume','department','cert','result']);
+
+  const labels: Record<string, string> = {
+    id: 'Внутр. №', model: 'Модель', manufacturer: 'Производитель',
+    serial: 'Серийный №', volume: 'Объём', department: 'Отдел',
+    responsible: 'Ответственный', cert: 'Свидетельство', result: 'Результат',
+    notes: 'Примечание',
+  };
+
+  const renderCell = (p: Pipette, field: string): string => {
+    if (field === 'id') return `<strong>${p.id}</strong>`;
+    if (field === 'volume') return p.volume ? `${p.volume} мкл` : '—';
+    if (field === 'model') return p.model;
+    if (field === 'cert') {
+      const v = singleCert.value ? commonCert.value.trim() : (certMap.value[p.id] || '');
+      return v || '—';
+    }
+    if (field === 'result') {
+      const v = resultMap.value[p.id] || 'pass';
+      return v === 'pass' ? 'Годен' : v === 'fail' ? 'Брак' : 'В процессе';
+    }
+    return String((p as Record<string, unknown>)[field] || '—');
+  };
+
+  const headerCells = fields.map(f => `<th>${labels[f] || f}</th>`).join('');
+  const rows = items.value.map((p, i) => {
+    const cells = fields.map(f => `<td>${renderCell(p, f)}</td>`).join('');
+    return `<tr><td style="text-align:center;">${i+1}</td>${cells}</tr>`;
+  }).join('');
+
+  const win = window.open('', '_blank');
+  if (!win) { toast.error('Разрешите всплывающие окна'); return; }
+
+  win.document.write(`<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Акт возврата</title>
+<style>
+@page { size: A4 landscape; margin: 12mm 8mm; }
+body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 9pt; color: #1a1a2e; margin: 0; }
+h1 { font-size: 15pt; text-align: center; margin: 10px 0 4px; }
+.subtitle { font-size: 10pt; text-align: center; color: #64748b; margin-bottom: 20px; }
+table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 10px; border: 1.5px solid #1e293b; }
+th { background: #1e293b; color: #fff; padding: 6px 5px; text-align: left; font-size: 7.5pt; text-transform: uppercase; border: 1px solid #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+td { padding: 5px; border: 0.5px solid #94a3b8; vertical-align: top; }
+tbody tr:nth-child(even) td { background: #f8fafc; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.footer { margin-top: 20px; font-size: 8pt; display: flex; justify-content: space-between; border-top: 1px solid #cbd5e1; padding-top: 8px; }
+</style></head><body>
+${buildHeaderHtml(settings.printDocs)}
+<h1>АКТ ВОЗВРАТА С ПОВЕРКИ</h1>
+<div class="subtitle">КГБУЗ Краевая клиническая больница · Клинико-диагностическая лаборатория</div>
+<table><thead><tr><th style="width:5%;text-align:center;">№</th>${headerCells}</tr></thead>
+<tbody>${rows}</tbody></table>
+<div class="footer">
+  <div>
+    <div>Сформировал: <b>${userPosition}, ${user}</b></div>
+    <div>Дата поверки: <b>${formatDate(date.value)}</b> · Приборов: <b>${items.value.length}</b></div>
+    <div>Организация: <b>${org.value || 'ФБУ «Красноярский ЦСМ»'}</b> · Дата печати: <b>${today}</b></div>
+    ${note.value.trim() ? `<div>Примечание: <b>${note.value.trim()}</b></div>` : ''}
+  </div>
+  <div>Подпись: _______________</div>
+</div>
+</body></html>`);
+  win.document.close();
+  win.document.title = 'Акт возврата';
+  win.focus();
+  setTimeout(() => win.print(), 300);
+  toast.success('Окно печати открыто');
+}
+  
 </script>
