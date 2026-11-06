@@ -111,9 +111,11 @@ function toggleTheme() {
   try { localStorage.setItem('pipette_theme', isDark.value ? 'dark' : 'light'); } catch { /* ignore */ }
 }
 
+import { useModals } from '@/composables/useModals';
+const modals = useModals();
+
 function onPassword() {
-  // Реализуем полноценно в Блоке 4 (модалка смены пароля)
-  toast.show('Смена пароля будет в Блоке 4', 'warn');
+  modals.openChangePassword('change');
 }
 
 function onLogout() {
