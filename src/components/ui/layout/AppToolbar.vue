@@ -101,9 +101,11 @@ import { usePipettesStore } from '@/stores/pipettes';
 import { useToastStore } from '@/stores/toast';
 import { useModals } from '@/composables/useModals';
 import { usePermissions } from '@/stores/auth';
+import { useUiStore } from '@/stores/ui';
 
 const modals = useModals();
 const perm = usePermissions();
+const ui = useUiStore();
 const pip = usePipettesStore();
 const toast = useToastStore();
 const menuOpen = ref(false);
@@ -138,6 +140,13 @@ function closeMenuAnd(action: string) {
       break;
     case 'import':
       modals.openImport();
+      break;
+    case 'settings':
+      if (!perm.canManageSettings.value) {
+        toast.error('Нет прав на настройки');
+        break;
+      }
+      ui.open('settings');
       break;
     default:
       toast.show(`Действие «${action}» — в следующих блоках`, 'warn');
