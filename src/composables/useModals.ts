@@ -76,12 +76,12 @@ export function useModals() {
         action: () => openHistory(id),
       });
     }
-    if (perm.canViewAudit.value) {
-      items.push({
-        label: '<i class="fa-solid fa-clipboard-list"></i> Аудит изменений',
-        action: () => toast.show('Аудит оборудования — в Блоке 7', 'warn'),
+     if (perm.canViewAudit.value) {
+       items.push({
+       label: '<i class="fa-solid fa-clipboard-list"></i> Аудит изменений',
+       action: () => openEquipmentAudit(id),
       });
-    }
+     }
 
     if (status === 'sent' && perm.canBulkSend.value) {
       items.push({ divider: true });
@@ -182,11 +182,21 @@ function openBulkResponsible() {
 function openBarcodeScanner() { ui.open('barcodeScanner'); }
 function openBarcodePrint()   { ui.open('barcodePrint'); }
 function openImport()         { ui.open('import'); }
+function openAudit() {
+  if (!perm.canViewLog.value) { toast.error('Нет прав на журнал'); return; }
+  ui.open('audit');
+}
+function openEquipmentAudit(id: string) {
+  if (!perm.canViewAudit.value) { toast.error('Нет прав на аудит'); return; }
+  ui.open('equipmentAudit', id);
+}
+function openHelp() { ui.open('help'); }
 
   return {
   openForm, openHistory, openQuickCal, openTransfer, openChangePassword,
   onRowActions, cancelSendConfirm, deleteConfirm,
   openBulkSend, openBulkReturn, openBulkResponsible,
   openBarcodeScanner, openBarcodePrint, openImport,
+  openAudit, openEquipmentAudit, openHelp,
  };
 }
