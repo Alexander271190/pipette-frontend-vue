@@ -97,9 +97,6 @@ export const useAuthStore = defineStore('auth', () => {
   };
 });
 
-// Вспомогательные функции проверки прав (для удобства)
-import { computed } from 'vue';
-
 export function usePermissions() {
   const auth = useAuthStore();
   const p = (key: string) => auth.hasPermission(key);
@@ -124,6 +121,9 @@ export function usePermissions() {
     canManagePipettes:          computed(() =>
       p('manage_pipettes') || p('add_pipette') || p('edit_pipette') ||
       p('delete_pipette') || p('quick_calibration') || p('bulk_send') || p('bulk_return')
+    ),
+    canManageRoles: computed(() =>
+      auth.isAdmin || auth.user?.role === 'senior_lab'
     ),
   };
 }
